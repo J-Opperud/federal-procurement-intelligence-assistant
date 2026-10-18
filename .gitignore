@@ -1,0 +1,32 @@
+# Python virtual environment
+.venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local databases
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Generated vector database data
+chroma_data/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local database backups
+backups/
