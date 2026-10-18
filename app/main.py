@@ -1,12 +1,5 @@
 from fastapi import FastAPI
 
-
-
-
-
-
-from fastapi import FastAPI
-
 from app.routers import system
 
 app = FastAPI(
