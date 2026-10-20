@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     data_dir: Path = PROJECT_ROOT / "data"
     database_url: str | None = None
 
+    jwt_secret_key: str | None = None
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
 
     def get_database_url(self) -> str:
                 """Return the configured database URL or the default SQLite URL."""
