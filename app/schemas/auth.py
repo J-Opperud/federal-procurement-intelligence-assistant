@@ -1,8 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
-
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserRegister(BaseModel):
@@ -16,7 +14,15 @@ class UserRegister(BaseModel):
     password: str = Field(
         min_length=15,
         max_length=128,
-        ) 
+        )
+    @field_validator("username", mode="before")
+    @classmethod
+
+    def normalize_username(cls, value: str) -> str:
+        """Trim whitespace and normalize username casing."""
+        if isinstance(value, str):
+            return value.strip().lower()
+        return value
 
 
 class UserLogin(BaseModel):
@@ -46,8 +52,4 @@ class TokenResponse(BaseModel):
 
     access_token: str
     token_type: str = "bearer"
-
-
-
-
 

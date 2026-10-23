@@ -74,7 +74,7 @@ def register_user(payload: UserRegister, db: DbSession) -> User:
     return user
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/token", response_model=TokenResponse)
 
 def login_user(
     payload: UserLogin, 
@@ -82,7 +82,7 @@ def login_user(
     ) -> TokenResponse:
     """Verify credentials and issue an access token."""
     
-    username = payload.username.lower()
+    username = payload.username.strip().lower()
     
     user = db.scalar(
         select(User).where(User.username == username)

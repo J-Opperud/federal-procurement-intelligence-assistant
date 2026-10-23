@@ -1,17 +1,46 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     String,
     Text,
+    event,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator
 
 from app.database import Base
+
+
+def utc_now() -> datetime:
+    """Return the current timezone-aware UTC timestamp."""
+    return datetime.now(timezone.utc)
+
+
+class UTCDateTime(TypeDecorator):
+    """Store UTC timestamps and restore UTC awareness on reads."""
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            raise ValueError("Datetime must be timezone-aware.")
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
 
 
 class User(Base):
@@ -19,88 +48,118 @@ class User(Base):
 
     __tablename__ = "users"
 
+    id: Mapped[int] = mapped_column(primary_key=True)
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True
-        )
     username: Mapped[str] = mapped_column(
         String(100),
         unique=True,
         index=True,
         nullable=False,
-        )
+    )
+
     hashed_password: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        )
+    )
+
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
         nullable=False,
-        )
+    )
+
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
+        UTCDateTime(),
+        default=utc_now,
         nullable=False,
-        )
-    research_queries: Mapped[
-        list["ResearchQuery"]] = relationship(
-            back_populates="user",
-            cascade="all,delete-orphan"
-        )
+    )
+
+    research_queries: Mapped[list["ResearchQuery"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+
+Index(
+    "uq_users_username_lower",
+    func.lower(User.username),
+    unique=True,
+)
+
+
+@event.listens_for(User, "before_insert")
+@event.listens_for(User, "before_update")
+def normalize_username(mapper, connection, target: User) -> None:
+    """Normalize usernames before persisting them."""
+    if target.username is not None:
+        target.username = target.username.strip().lower()
+
 
 class ProcurementNotice(Base):
     """A structured federal procurement opportunity."""
 
     __tablename__ = "procurement_notices"
 
-    id: Mapped[int] = mapped_column(
-        primary_key=True,
-        )
+    id: Mapped[int] = mapped_column(primary_key=True)
+
     sam_notice_id: Mapped[str] = mapped_column(
         String(100),
         unique=True,
         index=True,
         nullable=False,
-        )
+    )
+
     title: Mapped[str] = mapped_column(
         String(500),
         nullable=False,
-        )
+    )
+
     notice_type: Mapped[str] = mapped_column(
-       String(100),
-       nullable=False,
-        )
+        String(100),
+        nullable=False,
+    )
+
     department: Mapped[str | None] = mapped_column(
         String(255),
-        )
+        nullable=True,
+    )
+
     posted_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-        )
+        UTCDateTime(),
+        nullable=True,
+    )
+
     response_deadline: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-        )
+        UTCDateTime(),
+        nullable=True,
+    )
+
     source_url: Mapped[str | None] = mapped_column(
-        String(2048)
-        )
-    description: Mapped[str | None] = mapped_column(Text)
+        String(2048),
+        nullable=True,
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
 
     last_fetched_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-        )
+        UTCDateTime(),
+        default=utc_now,
+        onupdate=utc_now,
+        nullable=True,
+    )
+
     source_documents: Mapped[list["SourceDocument"]] = relationship(
         back_populates="procurement_notice",
         cascade="all, delete-orphan",
-        )
+    )
 
 
 class SourceDocument(Base):
-    """
-    A source document associated with a notice or reference source.
-    """
+    """A source document associated with a notice or reference source."""
+
     __tablename__ = "source_documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -109,28 +168,37 @@ class SourceDocument(Base):
         ForeignKey("procurement_notices.id"),
         nullable=True,
         index=True,
-        )
+    )
+
     title: Mapped[str] = mapped_column(
         String(500),
-        nullable=False
-        )
+        nullable=False,
+    )
+
     source_type: Mapped[str] = mapped_column(
         String(100),
-        nullable=False
-        )
-    source_url: Mapped[str | None] = mapped_column(String(2048))
+        nullable=False,
+    )
 
-    content_hash: Mapped[str | None] = mapped_column(String(128))
+    source_url: Mapped[str | None] = mapped_column(
+        String(2048),
+        nullable=True,
+    )
+
+    content_hash: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+    )
 
     indexed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-        )
-    procurement_notice: Mapped[
-        "ProcurementNotice | None"] = relationship(
-            back_populates="source_documents",
-        )
+        UTCDateTime(),
+        default=utc_now,
+        nullable=True,
+    )
+
+    procurement_notice: Mapped["ProcurementNotice | None"] = relationship(
+        back_populates="source_documents",
+    )
 
 
 class ResearchQuery(Base):
@@ -153,12 +221,12 @@ class ResearchQuery(Base):
 
     answer: Mapped[str] = mapped_column(
         Text,
-        nullable=False,
+        nullable=True,
     )
 
     sources_json: Mapped[str] = mapped_column(
         Text,
-        nullable=False,
+        nullable=True,
         default="[]",
     )
 
@@ -168,8 +236,8 @@ class ResearchQuery(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
+        UTCDateTime(),
+        default=utc_now,
         nullable=False,
     )
 

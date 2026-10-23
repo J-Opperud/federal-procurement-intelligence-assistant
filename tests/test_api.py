@@ -12,3 +12,8 @@ def test_health_endpoint_returns_ok():
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+def test_unknown_endpoint_returns_not_found():
+    response = client.get("/this-endpoint-does-not-exist")
+
+    assert response.status_code == 404
