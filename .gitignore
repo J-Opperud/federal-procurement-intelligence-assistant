@@ -30,3 +30,6 @@ dist/
 
 # Local database backups
 backups/
+
+# Database migration tooling is outside the current capstone scope
+migrations/
