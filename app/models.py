@@ -186,13 +186,18 @@ class SourceDocument(Base):
     )
 
     content_hash: Mapped[str | None] = mapped_column(
-        String(128),
+        String(64),
+        nullable=True,
+        index=True,
+    )
+
+    extracted_text: Mapped[str | None] = mapped_column(
+        Text,
         nullable=True,
     )
 
-    indexed_at: Mapped[datetime] = mapped_column(
+    indexed_at: Mapped[datetime | None] = mapped_column(
         UTCDateTime(),
-        default=utc_now,
         nullable=True,
     )
 
