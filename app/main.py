@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
-from app.routers import auth, research, system
+from app.routers import auth, documents, research, system
 from app.utils.exceptions import AppException
 from app.utils.exception_handlers import (
     app_exception_handler,
@@ -17,6 +17,7 @@ app = FastAPI(
 app.include_router(system.router)
 app.include_router(auth.router)
 app.include_router(research.router)
+app.include_router(documents.router)
 
 app.add_exception_handler(
     AppException,
