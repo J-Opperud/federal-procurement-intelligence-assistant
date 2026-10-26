@@ -29,8 +29,7 @@ def chunk_text(
         chunk = text[start : start + chunk_size].strip()
         if chunk:
             chunks.append(chunk)
-        # The final chunk already reaches the end; don't emit a redundant
-        # overlap-only suffix on the next iteration.
+        
         if start + chunk_size >= len(text):
             break
     return chunks

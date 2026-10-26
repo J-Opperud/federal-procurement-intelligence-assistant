@@ -259,6 +259,11 @@ def test_sync_rejects_invalid_parameters(document_api, payload):
 
 def test_sync_inserts_updates_and_reports_counts(document_api, monkeypatch):
     client, headers, session_factory = document_api
+    from app.services.chroma_evidence_service import IndexingResult
+    monkeypatch.setattr(
+        "app.routers.documents.index_procurement_notice",
+        lambda db, notice: IndexingResult(1, False, "test-hash"),
+    )
     seed_notice(
         session_factory,
         sam_notice_id="SAM-UPDATE-001",
@@ -306,7 +311,7 @@ def test_sync_inserts_updates_and_reports_counts(document_api, monkeypatch):
         "fetched_count": 3,
         "inserted_count": 1,
         "updated_count": 1,
-        "indexed_count": 0,
+        "indexed_count": 2,
         "failed_count": 0,
     }
     mock_client.search_opportunities.assert_called_once_with(
@@ -328,6 +333,11 @@ def test_sync_inserts_updates_and_reports_counts(document_api, monkeypatch):
 
 def test_sync_counts_invalid_notice_as_failed(document_api, monkeypatch):
     client, headers, _ = document_api
+    from app.services.chroma_evidence_service import IndexingResult
+    monkeypatch.setattr(
+        "app.routers.documents.index_procurement_notice",
+        lambda db, notice: IndexingResult(1, False, "test-hash"),
+    )
     mock_client = Mock()
     mock_client.search_opportunities.return_value = {
         "opportunities": [

@@ -48,3 +48,4 @@ def upsert_procurement_notice(
 
     db.flush()
     return notice, False
+

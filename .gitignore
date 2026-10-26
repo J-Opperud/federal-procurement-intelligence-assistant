@@ -31,8 +31,7 @@ dist/
 # Local database backups
 backups/
 
-# Database migration tooling is outside the current capstone scope
-migrations/
 
 # Phase 6 local smoke-test artifacts
 data/phase6-smoke-*/
+data/chroma/

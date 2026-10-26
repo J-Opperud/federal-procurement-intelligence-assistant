@@ -14,7 +14,7 @@ from app.schemas.source_documents import (
     SourceDocumentIndexResponse,
     SourceDocumentResponse,
 )
-from app.services.source_ingestion import index_source_document
+from app.services.chroma_evidence_service import index_source_document
 from app.utils.exceptions import AppException, NotFoundException
 
 router = APIRouter(prefix="/documents", tags=["Source documents"])

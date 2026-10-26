@@ -21,41 +21,6 @@ router = APIRouter(
 
 DbSession = Annotated[Session, Depends(get_db)]
 
-
-@router.post(
-    "/queries",
-    response_model=ResearchQueryResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_research_query(
-    payload: ResearchQueryCreate,
-    current_user: CurrentUser,
-    db: DbSession,
-) -> ResearchQueryResponse:
-    """Persist a research query under the authenticated user's ownership."""
-    query = ResearchQuery(
-        user_id=current_user.id,
-        question=payload.question,
-        answer=payload.answer,
-        sources_json=json.dumps(payload.sources),
-        sufficient_evidence=payload.sufficient_evidence,
-    )
-
-    db.add(query)
-    db.commit()
-    db.refresh(query)
-
-    return ResearchQueryResponse(
-        id=query.id,
-        user_id=query.user_id,
-        question=query.question,
-        answer=query.answer,
-        sources=json.loads(query.sources_json),
-        sufficient_evidence=query.sufficient_evidence,
-        created_at=query.created_at,
-    )
-
-
 @router.get(
     "/queries",
     response_model=list[ResearchQueryResponse],

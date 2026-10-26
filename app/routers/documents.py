@@ -1,15 +1,21 @@
 """Authenticated procurement document search and synchronization endpoints."""
 
+import logging
+
 from datetime import datetime, time, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
+
 from sqlalchemy.orm import Session
+from app.services.chroma_evidence_service import index_procurement_notice
 
 from app.database import get_db
 from app.models import ProcurementNotice
+
 from app.routers.auth import CurrentUser
 from app.schemas.documents import (
     DocumentListResponse,
@@ -21,11 +27,16 @@ from app.schemas.documents import (
 from app.schemas.sam_gov import SamOpportunity
 from app.services.procurement_mapping import map_sam_opportunity
 from app.services.procurement_sync import upsert_procurement_notice
+
+from app.services.chroma_evidence_service import index_procurement_notice
+
 from app.services.sam_gov import SamGovClient
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 DbSession = Annotated[Session, Depends(get_db)]
 
+
+logger = logging.getLogger(__name__)
 
 def _utc_day_start(value) -> datetime:
     """Convert a calendar date to the start of that day in UTC."""
@@ -115,7 +126,7 @@ def sync_documents(
     current_user: CurrentUser,
     db: DbSession,
 ) -> DocumentSyncResponse:
-    """Fetch a bounded set of notices and upsert them into the local database."""
+    """Fetch notices into SQL, then index their searchable text in ChromaDB."""
     client = SamGovClient()
     result = client.search_opportunities(
         posted_from=payload.posted_from.strftime("%m/%d/%Y"),
@@ -125,7 +136,9 @@ def sync_documents(
     opportunities = result["opportunities"]
     inserted_count = 0
     updated_count = 0
+    indexed_count = 0
     failed_count = 0
+    notices_to_index = []
 
     for item in opportunities:
         try:
@@ -136,28 +149,48 @@ def sync_documents(
             ):
                 continue
 
-            # A savepoint isolates a bad record without poisoning the session.
+            # Keep each malformed notice isolated from the remaining batch.
             with db.begin_nested():
-                _, created = upsert_procurement_notice(
-                    db,
-                    map_sam_opportunity(opportunity),
+                notice, created = upsert_procurement_notice(
+                    db, map_sam_opportunity(opportunity)
                 )
 
+            notices_to_index.append(notice)
             if created:
                 inserted_count += 1
             else:
                 updated_count += 1
         except (ValueError, SQLAlchemyError):
+            db.rollback()
             failed_count += 1
 
-    # If the final commit fails, return an error rather than counts for
-    # writes that were not durably committed.
+    stored_notices = db.scalars(
+        select(ProcurementNotice)).all()
+
+    for notice in stored_notices:
+        index_procurement_notice(db, notice)
+
+    # Commit structured SAM.gov records before attempting vector indexing.
+    # If embeddings or Chroma fail, the SQL notice remains available for retry.
     db.commit()
+
+    for notice in notices_to_index:
+        try:
+            result = index_procurement_notice(db, notice)
+            indexed_count += 1
+        except Exception:
+            logger.exception(
+                "Failed to index procurement notice %s",
+                notice.sam_notice_id,
+            )
+            failed_count += 1
+            # Do not discard valid SQL records because semantic indexing failed.
+            
 
     return DocumentSyncResponse(
         fetched_count=len(opportunities),
         inserted_count=inserted_count,
         updated_count=updated_count,
-        indexed_count=0,
+        indexed_count=indexed_count,
         failed_count=failed_count,
     )

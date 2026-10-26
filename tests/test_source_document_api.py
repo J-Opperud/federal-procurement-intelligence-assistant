@@ -10,7 +10,8 @@ from app.database import Base
 from app.models import ProcurementNotice, SourceDocument
 from app.routers.source_documents import create_notice_source
 from app.schemas.source_documents import SourceDocumentCreate
-from app.services.source_ingestion import IndexingResult, content_sha256
+from app.services.document_file_service import content_sha256
+from app.services.chroma_evidence_service import IndexingResult
 from app.utils.exceptions import AppException
 
 

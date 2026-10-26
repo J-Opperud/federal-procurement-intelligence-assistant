@@ -342,88 +342,6 @@ def _register_and_login(client, username):
     return response.json()["access_token"]
 
 
-def test_create_research_query_uses_authenticated_owner(client):
-    from sqlalchemy import select
-
-    token = _register_and_login(client, "research_owner")
-    profile_response = client.get(
-        "/auth/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert profile_response.status_code == 200
-    expected_user_id = profile_response.json()["id"]
-
-    response = client.post(
-        "/research/queries",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "question": "Find open cybersecurity contracts",
-            "answer": "Two matching opportunities found.",
-            "sources": [{"sam_notice_id": "SAM-123"}],
-            "sufficient_evidence": True,
-        },
-    )
-
-    assert response.status_code == 201
-    result = response.json()
-    assert result["user_id"] == expected_user_id
-    assert result["question"] == "Find open cybersecurity contracts"
-    assert result["answer"] == "Two matching opportunities found."
-    assert result["sources"] == [{"sam_notice_id": "SAM-123"}]
-    assert result["sufficient_evidence"] is True
-    assert result["created_at"]
-
-    db_override = app.dependency_overrides[get_db]
-    generator = db_override()
-    db = next(generator)
-    try:
-        saved_query = db.scalar(
-            select(ResearchQuery).where(
-                ResearchQuery.id == result["id"]
-            )
-        )
-        assert saved_query is not None
-        assert saved_query.user_id == expected_user_id
-        assert saved_query.sources_json
-        assert saved_query.sources_json == (
-            '[{"sam_notice_id": "SAM-123"}]'
-        )
-    finally:
-        generator.close()
-
-
-def test_create_research_query_rejects_client_supplied_user_id(client):
-    token = _register_and_login(client, "research_no_impersonation")
-
-    response = client.post(
-        "/research/queries",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "user_id": 999999,
-            "question": "Find open cybersecurity contracts",
-            "answer": "Two matching opportunities found.",
-            "sources": [],
-            "sufficient_evidence": True,
-        },
-    )
-
-    assert response.status_code == 422
-
-
-def test_create_research_query_requires_authentication(client):
-    response = client.post(
-        "/research/queries",
-        json={
-            "question": "Find open cybersecurity contracts",
-            "answer": "Two matching opportunities found.",
-            "sources": [],
-            "sufficient_evidence": True,
-        },
-    )
-
-    assert response.status_code == 401
-
-
 def test_research_history_is_private_to_authenticated_user(client):
     token_one = _register_and_login(client, "history_owner_one")
     token_two = _register_and_login(client, "history_owner_two")
@@ -431,38 +349,38 @@ def test_research_history_is_private_to_authenticated_user(client):
     headers_one = {"Authorization": f"Bearer {token_one}"}
     headers_two = {"Authorization": f"Bearer {token_two}"}
 
-    response_one = client.post(
-        "/research/queries",
-        headers=headers_one,
-        json={
-            "question": "Question belonging to user one",
-            "answer": "Answer for user one",
-            "sources": [{"source": "one"}],
-            "sufficient_evidence": True,
-        },
-    )
-    response_two = client.post(
-        "/research/queries",
-        headers=headers_two,
-        json={
-            "question": "Question belonging to user two",
-            "answer": "Answer for user two",
-            "sources": [{"source": "two"}],
-            "sufficient_evidence": False,
-        },
-    )
+    user_one = client.get("/auth/me", headers=headers_one).json()
+    user_two = client.get("/auth/me", headers=headers_two).json()
 
-    assert response_one.status_code == 201
-    assert response_two.status_code == 201
+    db_override = app.dependency_overrides[get_db]
+    generator = db_override()
+    db = next(generator)
 
-    history_one = client.get(
-        "/research/queries",
-        headers=headers_one,
-    )
-    history_two = client.get(
-        "/research/queries",
-        headers=headers_two,
-    )
+    try:
+        db.add_all(
+            [
+                ResearchQuery(
+                    user_id=user_one["id"],
+                    question="Question belonging to user one",
+                    answer="Answer for user one",
+                    sources_json="[]",
+                    sufficient_evidence=True,
+                ),
+                ResearchQuery(
+                    user_id=user_two["id"],
+                    question="Question belonging to user two",
+                    answer="Answer for user two",
+                    sources_json="[]",
+                    sufficient_evidence=False,
+                ),
+            ]
+        )
+        db.commit()
+    finally:
+        generator.close()
+
+    history_one = client.get("/research/queries", headers=headers_one)
+    history_two = client.get("/research/queries", headers=headers_two)
 
     assert history_one.status_code == 200
     assert history_two.status_code == 200
@@ -477,14 +395,8 @@ def test_research_history_is_private_to_authenticated_user(client):
         "Question belonging to user two"
     ]
 
-    assert all(
-        item["user_id"] == response_one.json()["user_id"]
-        for item in results_one
-    )
-    assert all(
-        item["user_id"] == response_two.json()["user_id"]
-        for item in results_two
-    )
+    assert all(item["user_id"] == user_one["id"] for item in results_one)
+    assert all(item["user_id"] == user_two["id"] for item in results_two)
 
 
 def test_research_history_requires_authentication(client):

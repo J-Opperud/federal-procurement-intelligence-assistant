@@ -9,12 +9,8 @@ from sqlalchemy.orm import sessionmaker
 from app.database import Base
 from app.models import ProcurementNotice, SourceDocument
 from app.services.document_chunking import chunk_text
-from app.services.source_ingestion import (
-    content_sha256,
-    extract_document_text,
-    index_source_document,
-    retrieve_evidence,
-)
+from app.services.document_file_service import content_sha256, extract_document_text
+from app.services.chroma_evidence_service import index_source_document, retrieve_evidence
 
 
 @pytest.fixture
