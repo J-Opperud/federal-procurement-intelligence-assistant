@@ -3,8 +3,8 @@
 
 def chunk_text(
     text: str,
-    chunk_size: int = 300,
-    overlap: int = 50,
+    chunk_size: int = 600,
+    overlap: int = 20,
 ) -> list[str]:
     """Split text into overlapping, non-empty character chunks.
 

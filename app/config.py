@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256"] = "HS256"
 
     access_token_expire_minutes: int = Field(
-        default=30,
+        default=60,
         gt=0
     )
     # Semantic search and source-document indexing.
@@ -60,12 +60,12 @@ class Settings(BaseSettings):
 
       
     retrieval_n_results: int = Field(
-        default=3,
+        default=6,
         gt=0,
     )
 
     retrieval_distance_threshold: float = Field(
-        default=0.7,
+        default=1.1,
         ge=0,
         le=2,
     ) 
