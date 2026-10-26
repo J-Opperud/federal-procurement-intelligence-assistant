@@ -60,12 +60,12 @@ class Settings(BaseSettings):
 
       
     retrieval_n_results: int = Field(
-        default=5,
+        default=3,
         gt=0,
     )
 
     retrieval_distance_threshold: float = Field(
-        default=0.9,
+        default=0.7,
         ge=0,
         le=2,
     ) 
@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     )
 
     ollama_timeout_seconds: float = Field(
-        default=120.0,
+        default=300.0,
         gt=0,
     )
 
