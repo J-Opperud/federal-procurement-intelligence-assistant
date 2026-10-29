@@ -35,6 +35,11 @@ class ScoutAPI:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
+    
+    def get_current_user(self):
+        if not self.token:
+            raise APIError("Please sign in to continue.")
+    
 
     def register(self, username: str, password: str) -> dict:
         """Register a new user account."""

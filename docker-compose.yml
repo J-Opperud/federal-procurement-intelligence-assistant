@@ -14,13 +14,12 @@ services:
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
       - DATABASE_URL=sqlite:////data/scout.db
-      - CHROMA_PERSIST_DIRECTORY=/data/chroma  # <--- Forces Chroma into the persistent volume!
+      - CHROMA_PERSIST_DIRECTORY=/data/chroma  # <--- Forces vectors into the persistent volume!
     depends_on:
       ollama:
         condition: service_healthy
     volumes:
       - sqlite_data:/data
-      - chromadb:/data/chroma
     restart: unless-stopped
 
   ollama:

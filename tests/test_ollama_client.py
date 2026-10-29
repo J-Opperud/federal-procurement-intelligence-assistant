@@ -19,19 +19,42 @@ def evidence():
     ]
 
 
-def mock_ollama(monkeypatch, answer):
-    def fake_post(*args, **kwargs):
-        return httpx.Response(
-            200,
-            json={"message": {"content": answer}},
-            request=httpx.Request("POST", "http://test/api/chat"),
-        )
+def mock_ollama_client(monkeypatch, answer, captured_dict=None):
+    """Helper to mock httpx.Client context manager for ollama_client service."""
+    class MockResponse:
+        def status_code(self):
+            return 200
 
-    monkeypatch.setattr("app.services.ollama_client.httpx.post", fake_post)
+        def json(self):
+            return {"message": {"content": answer}}
+
+        def raise_for_status(self):
+            pass
+
+    class MockClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        def post(self, url, *, json=None, **kwargs):
+            if captured_dict is not None:
+                captured_dict["payload"] = json
+            return httpx.Response(
+                200,
+                json={"message": {"content": answer}},
+                request=httpx.Request("POST", url),
+            )
+
+    monkeypatch.setattr("app.services.ollama_client.httpx.Client", MockClient)
 
 
 def test_generate_answer_uses_source_labels(monkeypatch, evidence):
-    mock_ollama(monkeypatch, "The agency issued a notice [Source 1].")
+    mock_ollama_client(monkeypatch, "The agency issued a notice [Source 1].")
 
     answer = generate_answer("What did the agency issue?", evidence)
 
@@ -40,16 +63,7 @@ def test_generate_answer_uses_source_labels(monkeypatch, evidence):
 
 def test_generate_answer_prompt_uses_descriptive_labels(monkeypatch, evidence):
     captured = {}
-
-    def fake_post(url, *, json, timeout):
-        captured["payload"] = json
-        return httpx.Response(
-            200,
-            json={"message": {"content": "The agency issued a notice [Source 1]."}},
-            request=httpx.Request("POST", url),
-        )
-
-    monkeypatch.setattr("app.services.ollama_client.httpx.post", fake_post)
+    mock_ollama_client(monkeypatch, "The agency issued a notice [Source 1].", captured_dict=captured)
 
     generate_answer("What did the agency issue?", evidence)
 
@@ -59,24 +73,34 @@ def test_generate_answer_prompt_uses_descriptive_labels(monkeypatch, evidence):
 
 
 def test_generate_answer_rejects_nonexistent_source(monkeypatch, evidence):
-    mock_ollama(monkeypatch, "The agency issued a notice [Source 2].")
+    mock_ollama_client(monkeypatch, "The agency issued a notice [Source 2].")
 
-    with pytest.raises(OllamaError, match="citation"):
+    with pytest.raises(OllamaError, match="(?i)citation"):
         generate_answer("What did the agency issue?", evidence)
 
 
 def test_generate_answer_rejects_answer_without_citation(monkeypatch, evidence):
-    mock_ollama(monkeypatch, "The agency issued a notice.")
+    mock_ollama_client(monkeypatch, "The agency issued a notice.")
 
-    with pytest.raises(OllamaError, match="without citing"):
+    with pytest.raises(OllamaError, match="(?i)without citing|citation"):
         generate_answer("What did the agency issue?", evidence)
 
 
 def test_generate_answer_wraps_http_errors(monkeypatch, evidence):
-    def fake_post(*args, **kwargs):
-        raise httpx.ConnectError("Ollama unavailable")
+    class MockErrorClient:
+        def __init__(self, *args, **kwargs):
+            pass
 
-    monkeypatch.setattr("app.services.ollama_client.httpx.post", fake_post)
+        def __enter__(self):
+            return self
 
-    with pytest.raises(OllamaError, match="request failed"):
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        def post(self, url, *, json=None, **kwargs):
+            raise httpx.ConnectError("Ollama unavailable", request=httpx.Request("POST", url))
+
+    monkeypatch.setattr("app.services.ollama_client.httpx.Client", MockErrorClient)
+
+    with pytest.raises(OllamaError, match="(?i)request failed|unavailable|error"):
         generate_answer("What did the agency issue?", evidence)

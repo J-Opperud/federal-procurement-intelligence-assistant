@@ -58,7 +58,8 @@ def generate_answer(question: str, evidence: list[dict[str, Any]]) -> str:
     user_prompt = (
         f"Question:\n{question}\n\n"
         f"Retrieved Evidence:\n{context}\n\n"
-        "Provide a concise, cited answer based only on this evidence."
+        "Provide a concise, cited answer based only on this evidence. "
+        "REMEMBER: Every single sentence or bullet point MUST end with its exact source tag (e.g., [Source 1])."
     )
 
     url = f"{settings.ollama_base_url.rstrip('/')}/api/chat"
@@ -69,7 +70,7 @@ def generate_answer(question: str, evidence: list[dict[str, Any]]) -> str:
         write=30.0,
         pool=10.0
     )
-    print(f"--- DEBUG PROMPT SENT TO OLLAMA ---\n{user_prompt}\n---------------------------------")
+    
 
     try:
         with httpx.Client(timeout=timeout_config) as client:
