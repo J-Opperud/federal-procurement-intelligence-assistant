@@ -1,0 +1,35 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+
+# Local databases, backups, and vector stores
+/data/
+/backups/
+*.sqlite
+*.db
+
+# Environment variables and secrets
+.env
+.env.local
+
+# Git and IDE configs
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Documentation and tests (optional, keeps image lean)
+
+
+tests/
+frontend/tests/
