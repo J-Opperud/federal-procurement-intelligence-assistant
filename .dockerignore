@@ -30,6 +30,3 @@ __pycache__/
 
 # Documentation and tests (optional, keeps image lean)
 
-
-tests/
-frontend/tests/
