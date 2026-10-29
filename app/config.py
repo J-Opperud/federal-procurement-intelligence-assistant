@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     )
 
     document_chunk_size: int = Field(
-        default=300,
+        default=600,
         ge=50,
         le=10_000
     )
@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     )
 
     ollama_timeout_seconds: float = Field(
-        default=300.0,
+        default=500.0,
         gt=0,
     )
 

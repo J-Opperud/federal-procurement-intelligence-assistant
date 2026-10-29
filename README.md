@@ -1,4 +1,96 @@
-# Sentinel Scout overview
+## User Guide
+Welcome to Sentinel Scout, your AI-powered federal procurement research assistant. This guide will walk you through setting up your account, searching official government notices, and leveraging retrieval-augmented generation (RAG) with strict citation guardrails to conduct multi-departmental analysis.
+
+1. Getting Started & Authentication
+
+Before running queries, you'll need to authenticate with the system.
+Accessing the Interface
+
+    Ensure your Docker containers are running (docker compose up).
+
+    Open your web browser and navigate to the Streamlit Frontend:
+
+        http://localhost:8501
+
+Creating an Account & Logging In
+
+    When you first open the app, use the authentication sidebar to register a new account (/auth/register) with a secure username and password.
+
+    Log in using your credentials. The app will securely store your expiring JWT session token in the background to authenticate your API requests.
+
+2. Synchronizing Procurement Data
+
+Before asking questions, your local database needs to be populated with real procurement notices from SAM.gov.
+
+    Navigate to the Data Synchronization tab in the UI.
+
+    Specify a date range (posted_from and posted_to) and an optional notice type or department filter (e.g., NAVSUP or NAVSEA).
+
+    Click Sync Documents.
+
+        The backend securely uses its server-side SAM.gov API key to fetch notices, upsert structured records into SQLite, and embed searchable text chunks into ChromaDB.
+
+3. Searching & Browsing Stored Notices
+
+You can explore your indexed database without invoking the LLM:
+
+    Go to the Documents tab.
+
+    Use keywords, notice types, or date filters to search locally stored notices instantly.
+
+    Click on any notice to inspect its full description, response deadlines, and official SAM.gov source URL.
+
+4. Asking Research Questions (RAG Pipeline)
+
+This is the core feature of Sentinel Scout. The system retrieves relevant evidence passages, checks them against a sufficiency threshold, and prompts the local LLM to generate an answer—enforcing strict citation links back to official sources.
+Example Presentation Queries
+
+To showcase the system's precision and cross-departmental capabilities during your demo, try entering these queries:
+
+    Focused & Direct (Hardware Precision):
+
+        "What specific repair and modification scopes does NAVSUP outline for the manifold assembly and video recorder contracts?"
+
+    Cross-Departmental Synthesis (Multi-Agency Analysis):
+
+        "Compare and contrast the primary electronic and mechanical equipment targeted for repair, modification, and calibration between NAVSUP and NAVSEA procurement notices."
+
+Reviewing Answers & Citations
+
+    Evidence-Backed Output: Every generated answer will feature clear source references and excerpts.
+
+    Backend Guardrails: If the retrieved text does not contain enough evidence to answer your question, the system will transparently report insufficient evidence rather than guessing or hallucinating facts.
+
+
+### Startup and Initialization
+
+The intended development startup command is:
+
+    docker compose up --build
+
+The first startup may take longer because images and the configured
+Ollama model may need to be downloaded.
+
+The implementation must provide a reliable model initialization
+procedure and meaningful health checks. A running container alone
+does not prove that its service is ready to handle requests.
+
+Service startup dependencies should use health checks where appropriate.
+The application must still handle temporary dependency failures.
+
+### Resource and Security Considerations
+
+- Pin tested container image versions rather than relying on `latest`.
+- Keep ChromaDB and Ollama ports private unless temporary debugging access
+  is required.
+- Use persistent volumes for application data and model files.
+- Avoid logging credentials or sensitive user research.
+- Do not delete persistent data as part of normal container startup.
+- Test the full stack on the target machine before finalizing resource
+  expectations.
+
+
+# Sentinel Scout technical overview
 
 Sentinel Scout is an AI-powered procurement research application that retrieves federal acquisition information from SAM.gov and uses retrieval-augmented generation (RAG) to answer questions with traceable evidence from official government documents.
 
@@ -36,7 +128,6 @@ flowchart TB
     CHROMA --- VOL
     OLLAMA --- VOL
 ```
-
 ## Database Schema
 
 Sentinel Scout uses SQLAlchemy with SQLite for structured data storage.
@@ -500,32 +591,6 @@ The SAM.gov API key and JWT signing secret are separate credentials.
 Secrets must never be included in frontend code, source control, or API
 responses.
 
-### Startup and Initialization
-
-The intended development startup command is:
-
-    docker compose up --build
-
-The first startup may take longer because images and the configured
-Ollama model may need to be downloaded.
-
-The implementation must provide a reliable model initialization
-procedure and meaningful health checks. A running container alone
-does not prove that its service is ready to handle requests.
-
-Service startup dependencies should use health checks where appropriate.
-The application must still handle temporary dependency failures.
-
-### Resource and Security Considerations
-
-- Pin tested container image versions rather than relying on `latest`.
-- Keep ChromaDB and Ollama ports private unless temporary debugging access
-  is required.
-- Use persistent volumes for application data and model files.
-- Avoid logging credentials or sensitive user research.
-- Do not delete persistent data as part of normal container startup.
-- Test the full stack on the target machine before finalizing resource
-  expectations.
 
 ### Verification Criteria
 
