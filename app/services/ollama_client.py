@@ -53,7 +53,7 @@ def generate_answer(question: str, evidence: list[dict[str, Any]]) -> str:
         )
 
     context = "\n\n".join(passages)
-
+    # Quick debug check in your backend
     # 2. Keep the user prompt clean and focused strictly on the question and data
     user_prompt = (
         f"Question:\n{question}\n\n"
@@ -69,6 +69,7 @@ def generate_answer(question: str, evidence: list[dict[str, Any]]) -> str:
         write=30.0,
         pool=10.0
     )
+    print(f"--- DEBUG PROMPT SENT TO OLLAMA ---\n{user_prompt}\n---------------------------------")
 
     try:
         with httpx.Client(timeout=timeout_config) as client:
