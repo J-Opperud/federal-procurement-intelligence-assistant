@@ -38,7 +38,7 @@ def test_explicit_database_url_takes_precedence(tmp_path):
 
 
 def test_jwt_secret_is_required(monkeypatch):
-    monkeypatch.delenv("JWT_SECRET_KEY", raises= False)
+    monkeypatch.delenv("JWT_SECRET_KEY", raising= False)
     with pytest.raises(ValidationError):
     
         Settings(_env_file=None,
