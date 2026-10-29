@@ -37,8 +37,10 @@ def test_explicit_database_url_takes_precedence(tmp_path):
     assert settings.get_database_url() == custom_url
 
 
-def test_jwt_secret_is_required():
+def test_jwt_secret_is_required(monkeypatch):
+    monkeypatch.delenv("JWT_SECRET_KEY", raises= False)
     with pytest.raises(ValidationError):
+    
         Settings(_env_file=None,
                  TEST_SAM_API_KEY = "mock-sam-api-key-for-tests",)
 
