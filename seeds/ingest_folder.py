@@ -6,7 +6,7 @@ from app.models import ProcurementNotice
 from app.services.source_ingestion import extract_document_text
 from app.services.chroma_evidence_service import index_procurement_notice
 
-def ingest_from_folder(folder_path: str = "seeds/samples"):
+def ingest_from_folder(folder_path: str = "seeds/"):
     target_dir = Path(folder_path)
     if not target_dir.exists():
         print(f"❌ Directory not found: {target_dir.absolute()}")
