@@ -30,9 +30,9 @@ Before asking questions, your local database needs to be populated with real pro
 
         The backend securely uses its server-side SAM.gov API key to fetch notices, upsert structured records into SQLite, and embed searchable text chunks into ChromaDB.
 
-Sentinel Scout includes a pre-packaged, multi-agency dataset covering NAVSUP, NAVSEA, Air Force, Army, and Defense Logistics Agency (DLA) procurement notices. This allows you or an evaluator to test RAG retrieval and citation generation immediately after launching the application without needing an active SAM.gov API key. located in seeds to populate into the database use 
-RUN
- PYTHONPATH=. python seeds/ingest_folder.py
+Sentinel Scout includes a pre-packaged, multi-agency dataset covering NAVSUP, NAVSEA, Air Force, Army, and Defense Logistics Agency (DLA) procurement notices. This allows a user or an evaluator to test RAG retrieval and citation generation immediately after launching the application without needing an active SAM.gov API key. Located in seeds dir to populate into the database use.
+- RUN 
+    PYTHONPATH=. python seeds/ingest_folder.py
 
 
 3. Searching & Browsing Stored Notices
