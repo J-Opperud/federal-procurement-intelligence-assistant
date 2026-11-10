@@ -153,9 +153,6 @@ def test_research_query_requires_a_user(db_session):
     db_session.rollback()
 
 
-
-
-
 def test_notice_can_be_retrieved_and_updated(db_session):
     notice = ProcurementNotice(
         sam_notice_id="SAM-CRUD-001",
@@ -553,10 +550,18 @@ def test_research_query_persists_required_fields(db_session):
     assert saved_query.sufficient_evidence is True
     assert saved_query.created_at is not None
     assert saved_query.created_at.tzinfo is timezone.utc
+
 def test_models_have_expected_primary_and_foreign_keys():
     expected = {
         User: {"primary_key": ["id"], "foreign_keys": {}},
-        ProcurementNotice: {"primary_key": ["id"], "foreign_keys": {}},
+        ProcurementNotice: {
+            "primary_key": ["id"],
+            "foreign_keys": {
+            "contracting_office_code": "contracting_offices.office_code",
+            "naics_code": "naics_codes.code",
+            "psc_code": "psc_codes.code",
+        },
+},
         SourceDocument: {
             "primary_key": ["id"],
             "foreign_keys": {
